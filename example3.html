@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location and Chat Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8c1c1;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #map {
+            width: 45%;
+            height: 400px;
+            border: 1px solid #ccc;
+        }
+
+        .chat-container {
+            width: 45%;
+        }
+
+        .chat-box {
+            height: 300px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #fff;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .message-input {
+            display: flex;
+        }
+
+        .message-input input {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .message-input button {
+            width: 20%;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-left: 10px;
+        }
+
+        button.close-btn {
+            background-color: #ff4d4d;
+        }
+
+        button.chat-btn {
+            background-color: #808080;
+        }
+
+        .toggle-location-btn {
+            background-color: #ffa500;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Location and Chat Application</h1>
+    
+    <div class="container">
+        <!-- Map Section -->
+        <div id="map"></div>
+
+        <!-- Chat Section -->
+        <div class="chat-container">
+            <div class="chat-box" id="chatMessages">
+                <!-- Chat messages will appear here -->
+            </div>
+
+            <div class="message-input">
+                <input type="text" id="chatInput" placeholder="Send message to user">
+                <button id="sendBtn">Send</button>
+            </div>
+
+            <button class="close-btn">Close</button>
+            <button class="chat-btn">Chat</button>
+            <button class="toggle-location-btn" id="toggleLocationBtn">Stop Location Updates</button>
+        </div>
+    </div>
+
+    <script>
+        let watchId; // To store the geolocation watch ID
+        let isLocationTracking = true; // To track if location updates are active
+
+        // Function to get the current timestamp
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString();
+        }
+
+        // Function to create an iframe to display the map
+        function updateMap(latitude, longitude) {
+            const mapContainer = document.getElementById('map');
+            const mapIframe = `
+                <iframe width="100%" height="400px" 
+                        src="https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed" 
+                        frameborder="0" allowfullscreen>
+                </iframe>
+            `;
+            mapContainer.innerHTML = mapIframe;
+        }
+
+        // WebSocket setup
+        const socket = new WebSocket('ws://localhost:8080'); 
+
+        // Chat DOM elements
+        const sendBtn = document.getElementById('sendBtn');
+        const chatInput = document.getElementById('chatInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const toggleLocationBtn = document.getElementById('toggleLocationBtn');
+
+        // Function to send a chat message via WebSocket
+        function sendMessage(message, userId = 'user123') {
+            const newMessage = document.createElement('div'); // Create a div for the message
+            newMessage.innerHTML = `<strong>You:</strong> ${message}`; // Set the inner HTML content of the message
+
+            chatMessages.appendChild(newMessage); // Append the message div to the chat box
+
+            const messageData = {
+                type: 'message',
+                content: message, // The message content
+                userId: userId
+            };
+
+            // Send the message via WebSocket (can still send text to server)
+            socket.send(JSON.stringify(messageData));
+        }
+
+        // Function to handle location updates
+        function handleLocationUpdate(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const currentTime = getCurrentTime(); // Get the current time
+
+            // Update the map on the left side
+            updateMap(latitude, longitude); // Update the map with the new location
+
+            // Create a message with the location and embed a Google Map inside the chat
+            const locationMessage = `
+                My current location (at ${currentTime}): Latitude ${latitude}, Longitude ${longitude}
+                <br>
+                <iframe 
+                    width="300" 
+                    height="200" 
+                    src="https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed" 
+                    frameborder="0" 
+                    allowfullscreen>
+                </iframe>
+            `;
+
+            // Send the message with the embedded map and timestamp
+            sendMessage(locationMessage);
+        }
+
+        // Function to handle location errors
+        function handleError(error) {
+            console.error("Error fetching geolocation:", error);
+            alert("Could not retrieve your location. Please check your browser settings.");
+        }
+
+        // Function to start tracking location
+        function startLocationTracking() {
+            if (navigator.geolocation) {
+                watchId = navigator.geolocation.watchPosition(handleLocationUpdate, handleError);
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        // Function to stop tracking location
+        function stopLocationTracking() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                const currentTime = getCurrentTime(); // Get the current time
+
+                // Notify that location sending has stopped
+                sendMessage(`Sending location by user has stopped at ${currentTime}`);
+                console.log("Location updates stopped.");
+            }
+        }
+
+        // Toggle location tracking when the user clicks the button
+        toggleLocationBtn.addEventListener('click', () => {
+            if (isLocationTracking) {
+                stopLocationTracking();
+                toggleLocationBtn.textContent = "Start Location Updates";
+                isLocationTracking = false;
+            } else {
+                startLocationTracking();
+                toggleLocationBtn.textContent = "Stop Location Updates";
+                isLocationTracking = true;
+            }
+        });
+
+        // Start location tracking initially
+        startLocationTracking();
+
+        // Button click event to send manual chat message
+        sendBtn.addEventListener('click', () => {
+            const message = chatInput.value.trim();
+            if (message) {
+                sendMessage(message); // Send manual message via WebSocket
+                chatInput.value = ''; // Clear input field
+            }
+        });
+
+        // Handling incoming messages from the WebSocket server
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'message') {
+                const receivedMessage = document.createElement('p');
+                receivedMessage.innerHTML = `<strong>${data.userId}:</strong> ${data.content}`;
+                chatMessages.appendChild(receivedMessage);
+            }
+        };
+
+        // Handle WebSocket error
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    </script>
+</body>
+</html>
