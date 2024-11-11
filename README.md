@@ -14,4 +14,13 @@ Key Features:
   o	Input field and button for sending manual chat messages.
 6.	Responsive Layout:
   o	Flex box design with side-by-side chat and map sections.
+#Output
+![image](https://github.com/user-attachments/assets/b5e347af-4174-41bb-aeb1-080c3284cbe4)
+![image](https://github.com/user-attachments/assets/a66d6b1d-6226-47de-ac5e-1f79b6a1d759)
+![image](https://github.com/user-attachments/assets/31ee285b-1948-4834-8754-13e0681ff541)
+![image](https://github.com/user-attachments/assets/9ab31d23-fc04-42a5-8f24-6c34b69cfa6a)
+
+
+
+
 
