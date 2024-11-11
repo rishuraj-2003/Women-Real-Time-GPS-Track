@@ -14,3 +14,4 @@ Key Features:
   o	Input field and button for sending manual chat messages.
 6.	Responsive Layout:
   o	Flex box design with side-by-side chat and map sections.
+
